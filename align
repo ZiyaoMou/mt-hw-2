@@ -44,7 +44,7 @@ bitext = [[sentence.strip().split() for sentence in pair] for pair in zip(open(f
 
 #IBM Model 1
 t = defaultdict(lambda: defaultdict(lambda: 1.0))
-for iteration in range(5):
+for iteration in range(10):
     count_ef = defaultdict(float)
     total_f = defaultdict(float)
     for (f, e) in bitext:
