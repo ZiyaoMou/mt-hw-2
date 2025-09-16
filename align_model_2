@@ -26,6 +26,27 @@ optparser.add_option("-l", "--lambda_param", dest="lmbda", default=4.0, type="fl
 f_data = "%s.%s" % (opts.train, opts.french)
 e_data = "%s.%s" % (opts.train, opts.english)
 
+# ADDED: count lines helper
+def count_lines(path):
+    with open(path, 'r', encoding='utf-8', errors='ignore') as fh:
+        return sum(1 for _ in fh)
+
+# ADDED: report input line counts
+e_total = count_lines(e_data)
+f_total = count_lines(f_data)
+sys.stderr.write(f"[info] Input lines — {e_data}: {e_total}, {f_data}: {f_total}\n")
+if e_total != f_total:
+    sys.stderr.write("[warn] e/f line counts differ; zip() will truncate to the shorter one.\n")
+
+# Load bitext (French=f, English=e)
+bitext = [[sentence.strip().split() for sentence in pair]
+          for pair in zip(open(f_data, 'r', encoding='utf-8', errors='ignore'),
+                          open(e_data, 'r', encoding='utf-8', errors='ignore'))][:opts.num_sents]
+
+# ADDED: report how many sentence pairs will be used
+pairs_loaded = len(bitext)
+sys.stderr.write(f"[info] Bitext sentence pairs loaded: {pairs_loaded} (limit={opts.num_sents})\n")
+
 # Load bitext (French=f, English=e)
 bitext = [[sentence.strip().split() for sentence in pair]
           for pair in zip(open(f_data, 'r', encoding='utf-8', errors='ignore'),
@@ -146,6 +167,8 @@ for it in range(iters):
     sys.stderr.write("  iter %d done\n" % (it + 1))
 
 # Decode: for each English token e_j, pick best source index i* maximizing δ * θ(e_j|f_i)
+align_lines = 0  # ADDED
+
 for f_sent, e_sent in bitext:
     m = len(e_sent)
     n = len(f_sent)
@@ -171,3 +194,11 @@ for f_sent, e_sent in bitext:
         if best_i > 0:  # do not output NULL links
             links.append(f"{best_i-1}-{j_idx-1}")  # keep 0-based indices like original
     sys.stdout.write((" ".join(links)) + "\n")
+    align_lines += 1  # ADDED
+
+# ADDED: after decoding, report and sanity-check counts
+sys.stderr.write(f"[info] Alignment lines written: {align_lines}\n")
+if align_lines != pairs_loaded:
+    sys.stderr.write(f"[warn] align lines ({align_lines}) != loaded pairs ({pairs_loaded})\n")
+else:
+    sys.stderr.write("[ok] alignment lines match loaded sentence pairs.\n")
